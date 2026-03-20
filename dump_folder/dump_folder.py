@@ -25,7 +25,7 @@ class DumpConfig:
 
     EXCLUDED_DIRS = {
         ".git", ".venv", "venv", "node_modules",
-        "__pycache__", ".idea", ".vscode",
+        "__pycache__", ".idea", ".vscode", "scratch"
     }
 
     EXCLUDED_FILES = {

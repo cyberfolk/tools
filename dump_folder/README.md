@@ -13,7 +13,7 @@
 
 ---
 
-## Usi da terminale:
+## Uso da terminale:
 
 ```bash
 dump_folder 
@@ -23,12 +23,21 @@ dump_folder /percorso/cartella
 
 ---
 
-## Per farlo partire:
-
-Col terminale vai nella radice della repo e fai:
+## Installarlo sul Terminale:
 
 ```bash
+# Posizionato nella radice della repo:
 chmod +x dump_folder/dump_folder.py
 mkdir -p ~/bin
+ln -s ~/path/assoluto/per/tools/dump_folder/dump_folder.py ~/bin/dump_folder
+```
+
+---
+
+## Aggiornarlo sul Terminale:
+
+Affinché le modifiche al codice si riflettano anche sul funzionamento da terminale, occorre eseguire:
+
+```bash
 ln -s ~/path/assoluto/per/tools/dump_folder/dump_folder.py ~/bin/dump_folder
 ```
