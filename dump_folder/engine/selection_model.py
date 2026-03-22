@@ -70,6 +70,7 @@ class SelectionState:
 class NormalizedSelection:
     includes: list[str]
     excludes: list[str]
+    roots: list[str] = field(default_factory=list)
 
 
 class FileSystemSelectionModel:
@@ -215,7 +216,7 @@ class FileSystemSelectionModel:
         self._simplify_rules()
         includes = sorted(self.selection_state.include_rules, key=lambda value: (path_depth(value), value.lower()))
         excludes = sorted(self.selection_state.exclude_rules, key=lambda value: (path_depth(value), value.lower()))
-        return NormalizedSelection(includes=includes, excludes=excludes)
+        return NormalizedSelection(includes=includes, excludes=excludes, roots=list(self.root_ids))
 
     def is_effectively_included(self, node_id, include_rules=None, exclude_rules=None):
         node_id = normalize_path(node_id)

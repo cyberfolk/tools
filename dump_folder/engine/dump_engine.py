@@ -142,11 +142,116 @@ def collect_files_from_inputs(selected_paths, output_path=None, config=DumpConfi
 
 
 class DumpManifest:
-    def __init__(self, files=None, directories=None, estimated_size=0, warnings=None):
+    def __init__(self, files=None, directories=None, estimated_size=0, estimated_output_size=0, warnings=None):
         self.files = files or []
         self.directories = directories or []
         self.estimated_size = estimated_size
+        self.estimated_output_size = estimated_output_size
         self.warnings = warnings or []
+
+
+def _estimate_text_output_bytes(content):
+    return len(content.encode("utf-8", errors="strict"))
+
+
+def estimate_output_size(files, selected_paths, output_format="txt", config=DumpConfig):
+    output_format = output_format.lower().strip()
+    timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+    selected_paths = [Path(path).resolve() for path in selected_paths]
+
+    if output_format == "txt":
+        total = len((config.SEPARATOR + "\n").encode("utf-8"))
+        total += len(f"# DUMP GENERATO IL: {timestamp}\n".encode("utf-8"))
+        total += len("# SORGENTI:\n".encode("utf-8"))
+        for source in selected_paths:
+            total += len(f"# - {normalize_path(str(source))}\n".encode("utf-8"))
+        total += len((config.SEPARATOR + "\n\n").encode("utf-8"))
+    elif output_format == "md":
+        total = len("# Dump selezione\n\n".encode("utf-8"))
+        total += len(f"Generato il: `{timestamp}`\n\n".encode("utf-8"))
+        total += len("## Sorgenti\n".encode("utf-8"))
+        for source in selected_paths:
+            total += len(f"- `{normalize_path(str(source))}`\n".encode("utf-8"))
+        total += len("\n---\n".encode("utf-8"))
+    else:
+        html_header = """<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Dump selezione</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; line-height: 1.4; }
+        h1 { margin-bottom: 8px; }
+        .meta { color: #555; margin-bottom: 24px; }
+        details {
+            border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px;
+            margin-bottom: 12px; background: #fafafa;
+        }
+        summary { cursor: pointer; font-weight: bold; }
+        pre {
+            background: #f4f4f4; padding: 12px; border-radius: 4px;
+            overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+        }
+        .binary { color: #7a5c00; font-style: italic; margin-top: 8px; }
+        .error { color: #a40000; font-weight: bold; margin-top: 8px; }
+    </style>
+</head>
+<body>
+"""
+        total = len(html_header.encode("utf-8"))
+        total += len("<h1>Dump selezione</h1>\n".encode("utf-8"))
+        meta_start = f"<div class='meta'><div><strong>Generato il:</strong> {html_escape(timestamp)}</div>"
+        total += len(meta_start.encode("utf-8"))
+        total += len("<div><strong>Sorgenti:</strong></div><ul>".encode("utf-8"))
+        for source in selected_paths:
+            total += len(f"<li>{html_escape(normalize_path(str(source)))}</li>".encode("utf-8"))
+        total += len("</ul></div>\n".encode("utf-8"))
+
+    for file_path in files:
+        display_path = _display_path(file_path, selected_paths)
+        if output_format == "txt":
+            total += len(("\n" + config.SEPARATOR + "\n").encode("utf-8"))
+            total += len(f"# FILE: {display_path}\n".encode("utf-8"))
+            total += len((config.SEPARATOR + "\n\n").encode("utf-8"))
+            if is_binary(file_path, config):
+                total += len(f"[BINARIO NON INCLUSO: {Path(file_path).name}]\n\n".encode("utf-8"))
+            else:
+                try:
+                    total += _estimate_text_output_bytes(read_text_file(file_path) + "\n\n")
+                except Exception as exc:  # pragma: no cover
+                    total += len(f"[ERRORE LETTURA FILE]\n{repr(exc)}\n\n".encode("utf-8"))
+        elif output_format == "md":
+            total += len(f"\n## `{display_path}`\n\n".encode("utf-8"))
+            if is_binary(file_path, config):
+                total += len(f"`[BINARIO NON INCLUSO: {Path(file_path).name}]`\n\n".encode("utf-8"))
+            else:
+                try:
+                    content = read_text_file(file_path)
+                    lang = get_code_fence_language(file_path)
+                    total += len(f"```{lang}\n".encode("utf-8"))
+                    total += _estimate_text_output_bytes(content)
+                    total += len("\n```\n\n".encode("utf-8"))
+                except Exception as exc:  # pragma: no cover
+                    total += len(f"```text\n[ERRORE LETTURA FILE]\n{repr(exc)}\n```\n\n".encode("utf-8"))
+        else:
+            total += len(f"<details>\n<summary>{html_escape(display_path)}</summary>\n".encode("utf-8"))
+            if is_binary(file_path, config):
+                total += len(f"<div class='binary'>[BINARIO NON INCLUSO: {html_escape(Path(file_path).name)}]</div>\n".encode("utf-8"))
+                total += len("</details>\n".encode("utf-8"))
+            else:
+                try:
+                    content = read_text_file(file_path)
+                    total += len("<pre><code>".encode("utf-8"))
+                    total += len(html_escape(content).encode("utf-8"))
+                    total += len("</code></pre>\n</details>\n".encode("utf-8"))
+                except Exception as exc:  # pragma: no cover
+                    total += len("<div class='error'>[ERRORE LETTURA FILE]</div>\n".encode("utf-8"))
+                    total += len(f"<pre><code>{html_escape(repr(exc))}</code></pre>\n</details>\n".encode("utf-8"))
+
+    if output_format == "html":
+        total += len("</body>\n</html>\n".encode("utf-8"))
+
+    return total
 
 
 def collect_manifest_from_selection(selection, output_path=None, config=DumpConfig):
@@ -199,6 +304,14 @@ def collect_manifest_from_selection(selection, output_path=None, config=DumpConf
         files.append(resolved)
         estimated_size += size
 
+    def register_directory(directory_path):
+        resolved = Path(directory_path).absolute()
+        normalized = normalize_path(str(resolved))
+        if normalized in seen_directories or is_excluded(resolved):
+            return
+        seen_directories.add(normalized)
+        directories.append(resolved)
+
     def handle_symlink(link_path):
         policy = getattr(config, "SYMLINK_POLICY", "ignore")
         normalized = normalize_path(str(Path(link_path).absolute()))
@@ -235,9 +348,7 @@ def collect_manifest_from_selection(selection, output_path=None, config=DumpConf
             register_file(resolved)
             return
         if resolved.is_dir():
-            if normalized not in seen_directories:
-                seen_directories.add(normalized)
-                directories.append(resolved)
+            register_directory(resolved)
 
             def on_error(exc):
                 failed_name = normalize_path(exc.filename) if getattr(exc, "filename", None) else normalized
@@ -245,10 +356,10 @@ def collect_manifest_from_selection(selection, output_path=None, config=DumpConf
 
             for root, dir_names, file_names in os.walk(resolved, onerror=on_error, followlinks=False):
                 current_root = Path(root).absolute()
-                normalized_root = normalize_path(str(current_root))
                 if is_excluded(current_root):
                     dir_names[:] = []
                     continue
+                register_directory(current_root)
 
                 pruned_dirs = []
                 for dir_name in sorted(dir_names):
@@ -274,8 +385,15 @@ def collect_manifest_from_selection(selection, output_path=None, config=DumpConf
 
     files.sort(key=lambda item: normalize_path(str(item)).lower())
     directories.sort(key=lambda item: normalize_path(str(item)).lower())
+    estimated_output_size = estimate_output_size(files, includes, output_format="txt", config=config)
     warnings = sorted(set(warnings))
-    return DumpManifest(files=files, directories=directories, estimated_size=estimated_size, warnings=warnings)
+    return DumpManifest(
+        files=files,
+        directories=directories,
+        estimated_size=estimated_size,
+        estimated_output_size=estimated_output_size,
+        warnings=warnings,
+    )
 
 
 def _display_path(file_path, selected_roots):
@@ -414,10 +532,12 @@ def generate_dump(selected_paths, output_path, output_format="txt", config=DumpC
     if isinstance(selected_paths, NormalizedSelection):
         selection = selected_paths
         normalized_inputs = [Path(path).resolve() for path in selection.includes]
+        display_roots = [Path(path).resolve() for path in (selection.roots or selection.includes)]
         manifest = collect_manifest_from_selection(selection, output_path=output_path, config=config)
         files = manifest.files
     else:
         normalized_inputs = [Path(path).resolve() for path in selected_paths]
+        display_roots = normalized_inputs
         files = collect_files_from_inputs(normalized_inputs, output_path=output_path, config=config)
     if not files:
         raise ValueError("Nessun file valido trovato nella selezione.")
@@ -429,15 +549,15 @@ def generate_dump(selected_paths, output_path, output_format="txt", config=DumpC
         if output_format == "txt":
             write_txt_header(out, normalized_inputs, timestamp, config)
             for file_path in files:
-                write_txt_file_dump(out, file_path, _display_path(file_path, normalized_inputs), config)
+                write_txt_file_dump(out, file_path, _display_path(file_path, display_roots), config)
         elif output_format == "md":
             write_md_header(out, normalized_inputs, timestamp)
             for file_path in files:
-                write_md_file_dump(out, file_path, _display_path(file_path, normalized_inputs), config)
+                write_md_file_dump(out, file_path, _display_path(file_path, display_roots), config)
         else:
             write_html_header(out, normalized_inputs, timestamp)
             for file_path in files:
-                write_html_file_dump(out, file_path, _display_path(file_path, normalized_inputs), config)
+                write_html_file_dump(out, file_path, _display_path(file_path, display_roots), config)
             write_html_footer(out)
 
     return str(output_path)

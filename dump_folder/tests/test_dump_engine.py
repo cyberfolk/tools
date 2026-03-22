@@ -106,6 +106,27 @@ class DumpEngineTests(unittest.TestCase):
             self.assertEqual(manifest.files, [keep_file.resolve()])
             self.assertEqual(manifest.directories, [source_dir.resolve()])
 
+    def test_collect_manifest_counts_nested_directories(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            source_dir = root / "project"
+            nested_dir = source_dir / "pkg"
+            deeper_dir = nested_dir / "data"
+            deeper_dir.mkdir(parents=True)
+            (deeper_dir / "keep.py").write_text("print('keep')\n", encoding="utf-8")
+
+            selection = NormalizedSelection(
+                includes=[str(source_dir.resolve())],
+                excludes=[],
+            )
+
+            manifest = collect_manifest_from_selection(selection)
+
+            self.assertEqual(
+                manifest.directories,
+                [source_dir.resolve(), nested_dir.resolve(), deeper_dir.resolve()],
+            )
+
     def test_generate_dump_accepts_normalized_selection(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)

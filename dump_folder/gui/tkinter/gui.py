@@ -23,10 +23,10 @@ LOG_DIR = ROOT_DIR / "dump_folder" / "logs"
 LOG_FILE = LOG_DIR / "tkinter.log"
 
 try:
-    from ...engine.dump_engine import DumpConfig, collect_manifest_from_selection, generate_dump
+    from ...engine.dump_engine import DumpConfig, collect_manifest_from_selection, estimate_output_size, generate_dump
     from ...engine.selection_model import FileSystemSelectionModel, path_depth
 except ImportError:  # pragma: no cover - supporto avvio come script
-    from dump_folder.engine.dump_engine import DumpConfig, collect_manifest_from_selection, generate_dump
+    from dump_folder.engine.dump_engine import DumpConfig, collect_manifest_from_selection, estimate_output_size, generate_dump
     from dump_folder.engine.selection_model import FileSystemSelectionModel, path_depth
 
 
@@ -126,11 +126,10 @@ class DumpApp:
         self.root_path_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Pronto per creare un nuovo dump")
         self.count_var = tk.StringVar(value="0 file / 0 cartelle")
-        self.summary_var = tk.StringVar(value="Scegli una root di lavoro da navigare.")
         self.file_count_var = tk.StringVar(value="0")
         self.directory_count_var = tk.StringVar(value="0")
         self.size_var = tk.StringVar(value="0 B")
-        self.warning_var = tk.StringVar(value="Nessun warning")
+        self.output_size_var = tk.StringVar(value="0 B")
         self.state_images = {}
 
         self._configure_styles()
@@ -242,15 +241,11 @@ class DumpApp:
             style="HeaderSub.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(6, 0))
 
-        metrics = self._create_card(header, column=1, padding=14)
-        ttk.Label(metrics, textvariable=self.count_var, style="Metric.TLabel").grid(row=0, column=0, sticky="e")
-        ttk.Label(metrics, text="Contenuto incluso", style="CardText.TLabel").grid(row=1, column=0, sticky="e")
-
     def _build_main_content(self):
         main = ttk.Frame(self.container, style="App.TFrame")
         main.grid(row=1, column=0, sticky="nsew")
-        main.columnconfigure(0, weight=1)
-        main.columnconfigure(1, weight=1)
+        main.columnconfigure(0, weight=1, uniform="main_split")
+        main.columnconfigure(1, weight=1, uniform="main_split")
         main.rowconfigure(0, weight=1)
 
         self._build_selection_panel(main)
@@ -284,30 +279,30 @@ class DumpApp:
     def _build_export_panel(self, parent):
         panel = self._create_card(parent, row=0, column=1, padding=18, sticky="nsew", style="CardAlt.TFrame")
         panel.columnconfigure(0, weight=1)
-        panel.rowconfigure(10, weight=1)
-
-        ttk.Label(panel, text="Selection Summary", style="Field.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            panel,
-            text="Il riepilogo deriva dalla selezione normalizzata: niente duplicati, override inclusi, preview coerente.",
-            style="Hint.TLabel",
-            wraplength=320,
-            justify="left",
-        ).grid(row=1, column=0, sticky="w", pady=(6, 18))
-
-        stats = self._create_card(panel, row=2, column=0, padding=14, sticky="ew", style="Card.TFrame")
-        for column in range(3):
+        stats = self._create_card(panel, row=0, column=0, padding=14, sticky="ew", style="Card.TFrame", padx=0)
+        for column in range(4):
             stats.columnconfigure(column, weight=1)
         ttk.Label(stats, text="File", style="CardText.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(stats, text="Cartelle", style="CardText.TLabel").grid(row=0, column=1, sticky="w")
         ttk.Label(stats, text="Dimensione", style="CardText.TLabel").grid(row=0, column=2, sticky="w")
+        ttk.Label(stats, text="Output stimato", style="CardText.TLabel").grid(row=0, column=3, sticky="w")
         ttk.Label(stats, textvariable=self.file_count_var, style="Metric.TLabel").grid(row=1, column=0, sticky="w")
         ttk.Label(stats, textvariable=self.directory_count_var, style="Metric.TLabel").grid(row=1, column=1, sticky="w")
         ttk.Label(stats, textvariable=self.size_var, style="Metric.TLabel").grid(row=1, column=2, sticky="w")
+        ttk.Label(stats, textvariable=self.output_size_var, style="Metric.TLabel").grid(row=1, column=3, sticky="w")
 
-        ttk.Label(panel, text="File di output", style="Field.TLabel").grid(row=3, column=0, sticky="w", pady=(20, 0))
+        status_card = self._create_card(panel, row=1, column=0, padding=14, sticky="ew", style="Card.TFrame", padx=0)
+        status_card.grid_configure(pady=(16, 0))
+        status_card.columnconfigure(0, weight=0)
+        status_card.columnconfigure(1, weight=1)
+        self.status_badge = ttk.Label(status_card, text="Stato", style="Pill.TLabel")
+        self.status_badge.grid(row=0, column=0, sticky="nw", padx=(0, 16))
+        self.status_label = ttk.Label(status_card, textvariable=self.status_var, style="CardText.TLabel", wraplength=420, justify="left")
+        self.status_label.grid(row=0, column=1, sticky="w")
+
+        ttk.Label(panel, text="File di output", style="Field.TLabel").grid(row=2, column=0, sticky="w", pady=(18, 0))
         output_row = ttk.Frame(panel, style="CardAlt.TFrame")
-        output_row.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        output_row.grid(row=3, column=0, sticky="ew", pady=(10, 0))
         output_row.columnconfigure(0, weight=1)
 
         self.output_entry = ttk.Entry(output_row, textvariable=self.output_var, style="App.TEntry")
@@ -315,9 +310,9 @@ class DumpApp:
         self.output_button = ttk.Button(output_row, text="Sfoglia", command=self.select_output, style="Secondary.TButton")
         self.output_button.grid(row=0, column=1, sticky="e", padx=(10, 0))
 
-        ttk.Label(panel, text="Root di lavoro", style="Field.TLabel").grid(row=5, column=0, sticky="w", pady=(18, 0))
+        ttk.Label(panel, text="Root di lavoro", style="Field.TLabel").grid(row=4, column=0, sticky="w", pady=(18, 0))
         root_row = ttk.Frame(panel, style="CardAlt.TFrame")
-        root_row.grid(row=6, column=0, sticky="ew", pady=(10, 0))
+        root_row.grid(row=5, column=0, sticky="ew", pady=(10, 0))
         root_row.columnconfigure(0, weight=1)
 
         self.root_path_entry = ttk.Entry(root_row, textvariable=self.root_path_var, style="App.TEntry")
@@ -326,44 +321,28 @@ class DumpApp:
         self.choose_root_button = ttk.Button(root_row, text="Sfoglia", command=self.choose_root, style="Secondary.TButton")
         self.choose_root_button.grid(row=0, column=1, sticky="e", padx=(10, 0))
 
-        format_card = ttk.Frame(panel, style="CardAlt.TFrame")
-        format_card.grid(row=7, column=0, sticky="ew", pady=(18, 0))
-        ttk.Label(format_card, text="Formato", style="Field.TLabel").grid(row=0, column=0, sticky="w")
-        radios = ttk.Frame(format_card, style="CardAlt.TFrame")
+        format_card = self._create_card(panel, row=6, column=0, padding=14, sticky="ew", style="Card.TFrame", padx=0)
+        format_card.grid_configure(pady=(28, 0))
+        format_card.columnconfigure(0, weight=1)
+        ttk.Label(format_card, text="Formato", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        radios = ttk.Frame(format_card, style="Card.TFrame")
         radios.grid(row=1, column=0, sticky="w", pady=(10, 0))
         for index, fmt in enumerate(("txt", "md", "html")):
             ttk.Radiobutton(radios, text=fmt.upper(), value=fmt, variable=self.format_var, style="App.TRadiobutton").grid(row=0, column=index, sticky="w", padx=(0, 8))
 
-        status_card = self._create_card(panel, row=8, column=0, padding=14, sticky="ew", style="Card.TFrame")
-        status_card.columnconfigure(0, weight=1)
-        self.status_badge = ttk.Label(status_card, text="Stato", style="Pill.TLabel")
-        self.status_badge.grid(row=0, column=0, sticky="w")
-        self.status_label = ttk.Label(status_card, textvariable=self.status_var, style="CardText.TLabel", wraplength=320, justify="left")
-        self.status_label.grid(row=1, column=0, sticky="w", pady=(10, 0))
-
         self.generate_button = ttk.Button(panel, text="Genera dump", command=self.generate, style="Primary.TButton")
-        self.generate_button.grid(row=9, column=0, sticky="ew", pady=(18, 0))
-
-        summary = self._create_card(panel, row=10, column=0, padding=14, sticky="ew", style="Card.TFrame")
-        summary.columnconfigure(0, weight=1)
-        ttk.Label(summary, text="Riepilogo rapido", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(summary, textvariable=self.summary_var, style="CardText.TLabel", wraplength=320, justify="left").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Label(summary, textvariable=self.warning_var, style="CardText.TLabel", wraplength=320, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
-
-        preview = self._create_card(panel, row=11, column=0, padding=12, sticky="nsew", style="Card.TFrame")
-        preview.columnconfigure(0, weight=1)
-        preview.rowconfigure(1, weight=1)
-        ttk.Label(preview, text="Preview export", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
-        self.preview_list = tk.Listbox(preview, activestyle="none", borderwidth=0, highlightthickness=0, bg=self.COLORS["surface"], fg=self.COLORS["text"])
-        self.preview_list.grid(row=1, column=0, sticky="nsew", pady=(10, 0))
+        self.generate_button.grid(row=7, column=0, sticky="ew", pady=(18, 0))
 
         self.progress = ttk.Progressbar(panel, mode="indeterminate", style="App.Horizontal.TProgressbar")
-        self.progress.grid(row=12, column=0, sticky="ew", pady=(18, 0))
+        self.progress.grid(row=8, column=0, sticky="ew", pady=(14, 0))
         self.progress.grid_remove()
 
-    def _create_card(self, parent, row=0, column=0, padding=12, sticky="nsew", style="Card.TFrame"):
+    def _create_card(self, parent, row=0, column=0, padding=12, sticky="nsew", style="Card.TFrame", padx=None):
         frame = ttk.Frame(parent, style=style, padding=padding)
-        frame.grid(row=row, column=column, sticky=sticky, padx=(0, 16) if column == 0 else (0, 0))
+        resolved_padx = (0, 16) if column == 0 else (0, 0)
+        if padx is not None:
+            resolved_padx = padx
+        frame.grid(row=row, column=column, sticky=sticky, padx=resolved_padx)
         return frame
 
     def _set_status(self, message, tone="neutral"):
@@ -522,15 +501,19 @@ class DumpApp:
         self.file_count_var.set("0")
         self.directory_count_var.set("0")
         self.size_var.set("0 B")
-        self.warning_var.set("Nessun warning")
-        self.summary_var.set("Nessun elemento selezionato per il dump. La root resta navigabile ma non esporta nulla finche non selezioni qualcosa.")
-        self.preview_list.delete(0, tk.END)
+        self.output_size_var.set("0 B")
         self._suggest_output_path()
 
     def _run_summary_refresh(self, request_id, selection, output_value, selected_format):
         LOGGER.info("Summary refresh started: request_id=%s", request_id)
         try:
             manifest = collect_manifest_from_selection(selection, config=DumpConfig)
+            manifest.estimated_output_size = estimate_output_size(
+                manifest.files,
+                selection.includes,
+                output_format=selected_format.lower(),
+                config=DumpConfig,
+            )
         except Exception as exc:  # pragma: no cover - background logging
             LOGGER.error("Summary refresh failed: request_id=%s error=%s", request_id, exc, exc_info=True)
             self.root.after(0, self._on_summary_refresh_error, request_id, str(exc))
@@ -557,19 +540,7 @@ class DumpApp:
         self.file_count_var.set(str(file_count))
         self.directory_count_var.set(str(directory_count))
         self.size_var.set(human_size(manifest.estimated_size))
-
-        self.summary_var.set(
-            f"{len(selection.includes)} include rule, {len(selection.excludes)} exclude rule. "
-            f"Formato: {result['selected_format']}. Output: {result['output_value'] or 'non ancora scelto'}."
-        )
-        self.warning_var.set("Warning: " + " | ".join(manifest.warnings[:3]) if manifest.warnings else "Nessun warning")
-
-        self.preview_list.delete(0, tk.END)
-        for file_path in manifest.files[: self.preview_limit]:
-            self.preview_list.insert(tk.END, str(file_path))
-        remaining = len(manifest.files) - self.preview_limit
-        if remaining > 0:
-            self.preview_list.insert(tk.END, f"... altri {remaining} file")
+        self.output_size_var.set(human_size(manifest.estimated_output_size))
 
         self._suggest_output_path()
         LOGGER.info(
@@ -583,7 +554,6 @@ class DumpApp:
     def _on_summary_refresh_error(self, request_id, error_message):
         if request_id != self.summary_request_id:
             return
-        self.warning_var.set(f"Errore riepilogo: {error_message}")
         LOGGER.error("Summary refresh UI error: request_id=%s error=%s", request_id, error_message)
 
     def _load_preferences(self):
