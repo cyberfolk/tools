@@ -63,3 +63,11 @@ Rebuild e riavvio rapido da Git Bash:
 ```bash
 dump_folder/scripts/rebuild_electron_app.sh
 ```
+
+
+---
+
+Comando per buildare l'exe di tkinter
+```bash
+$ pyinstaller --onefile --windowed --icon gui/tkinter/assets/app.ico --name DumpBuilder gui/tkinter/main.py
+```

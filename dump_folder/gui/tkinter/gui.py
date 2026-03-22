@@ -48,6 +48,11 @@ def configure_logging():
 LOGGER = configure_logging()
 
 
+def resource_path(*parts: str) -> Path:
+    base_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return base_dir.joinpath(*parts)
+
+
 def install_global_exception_logging():
     def log_unhandled(exc_type, exc_value, exc_traceback):
         LOGGER.critical(
@@ -230,16 +235,9 @@ class DumpApp:
 
     def _build_header(self):
         header = ttk.Frame(self.container, style="App.TFrame")
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 0))
         header.columnconfigure(0, weight=1)
         header.columnconfigure(1, weight=0)
-
-        ttk.Label(header, text="Dump Builder", style="HeaderTitle.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            header,
-            text="Scegli una root di lavoro, naviga il tree e seleziona con checkbox tri-state cosa dumpare.",
-            style="HeaderSub.TLabel",
-        ).grid(row=1, column=0, sticky="w", pady=(6, 0))
 
     def _build_main_content(self):
         main = ttk.Frame(self.container, style="App.TFrame")
@@ -828,6 +826,12 @@ class DumpApp:
 def run_app():
     install_global_exception_logging()
     root = tk.Tk()
+    icon_path = resource_path("assets", "app.ico")
+    if icon_path.exists():
+        try:
+            root.iconbitmap(default=str(icon_path))
+        except tk.TclError:
+            LOGGER.warning("Impossibile caricare l'icona: %s", icon_path, exc_info=True)
     root.geometry("1220x760")
     DumpApp(root)
     root.mainloop()
