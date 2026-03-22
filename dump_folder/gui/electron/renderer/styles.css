@@ -1,0 +1,403 @@
+:root {
+  --bg: #f3efe7;
+  --surface: #fffaf2;
+  --surface-alt: #f7f1e8;
+  --border: #d8ccbd;
+  --text: #1c1814;
+  --muted: #6d645a;
+  --accent: #b5532d;
+  --accent-soft: #f4d7ca;
+  --success: #2f6b51;
+  --success-soft: #d7eadf;
+  --error: #8c2f2f;
+  --error-soft: #f3d9d9;
+  --selected-row: #dcebdc;
+  --partial-row: #f3e5b8;
+  --partial-mark: #b1841a;
+  --unchecked-border: #c9bcac;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 20px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 18px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.header h1,
+.panel-head h2,
+.summary-card h3,
+.preview-card h3 {
+  margin: 0;
+}
+
+.header p,
+.panel-head p,
+.summary-card p,
+.footer p,
+.footer small {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.metric-card,
+.card,
+.stats-card,
+.summary-card,
+.preview-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.card {
+  background: var(--surface);
+  padding: 18px;
+}
+
+.card-alt {
+  background: var(--surface-alt);
+}
+
+.metric-card {
+  background: var(--surface);
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.metric-card strong,
+.stats-card strong {
+  font-size: 1.5rem;
+}
+
+.metric-card span,
+.stats-card span {
+  color: var(--muted);
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr);
+  gap: 18px;
+  min-height: 0;
+}
+
+.panel-left,
+.panel-right {
+  display: grid;
+  min-height: 0;
+}
+
+.panel-left {
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+}
+
+.panel-right {
+  grid-template-rows: auto auto auto auto auto auto 1fr auto auto;
+  gap: 16px;
+}
+
+.tree-root {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.tree-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.tree-list {
+  list-style: none;
+  padding-left: 20px;
+  margin: 0;
+}
+
+.tree-list.root {
+  padding-left: 0;
+}
+
+.tree-item {
+  margin: 2px 0;
+}
+
+.tree-row {
+  display: grid;
+  grid-template-columns: 24px 22px minmax(0, 1.2fr) minmax(72px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.tree-row:hover {
+  background: rgba(181, 83, 45, 0.08);
+}
+
+.tree-row.checked {
+  background: var(--selected-row);
+}
+
+.tree-row.indeterminate {
+  background: var(--partial-row);
+}
+
+.tree-row.focused {
+  outline: 1px solid rgba(181, 83, 45, 0.35);
+}
+
+.expander {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+  color: var(--muted);
+}
+
+.expander.hidden {
+  visibility: hidden;
+}
+
+.check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--unchecked-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: var(--surface);
+}
+
+.check.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fffaf2;
+}
+
+.check.indeterminate {
+  background: var(--partial-mark);
+  border-color: var(--partial-mark);
+  color: #fff7e8;
+}
+
+.tree-kind,
+.tree-path {
+  color: var(--muted);
+}
+
+.tree-name,
+.tree-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-kind {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.actions,
+.output-row,
+.radio-row,
+.footer {
+  display: flex;
+  gap: 10px;
+}
+
+.actions {
+  justify-content: flex-end;
+}
+
+.actions button:first-child {
+  margin-right: auto;
+}
+
+.stats-card {
+  background: var(--surface);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+}
+
+.output-row input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+
+.radio-row {
+  flex-wrap: wrap;
+}
+
+.radio-row label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255, 250, 242, 0.8);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.summary-card,
+.preview-card {
+  background: var(--surface);
+  padding: 14px;
+}
+
+.preview-card {
+  min-height: 220px;
+  overflow: auto;
+}
+
+.preview-card ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.preview-card li {
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.busy-bar {
+  height: 10px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, transparent, var(--accent), transparent)
+    0 0 / 200px 100% no-repeat,
+    var(--surface);
+  animation: loading 1.1s linear infinite;
+  border: 1px solid var(--border);
+}
+
+.hidden {
+  display: none;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.status-badge.neutral {
+  background: var(--surface-alt);
+  color: var(--muted);
+}
+
+.status-badge.working {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.status-badge.success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-badge.error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+button {
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.secondary {
+  background: var(--surface-alt);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+button.ghost {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+@keyframes loading {
+  from {
+    background-position: -200px 0, 0 0;
+  }
+  to {
+    background-position: calc(100% + 200px) 0, 0 0;
+  }
+}
+
+@media (max-width: 1080px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tree-row {
+    grid-template-columns: 24px 22px minmax(0, 1fr);
+  }
+
+  .tree-kind,
+  .tree-path {
+    display: none;
+  }
+}

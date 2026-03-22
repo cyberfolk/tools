@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dump Builder Electron</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header">
+      <div>
+        <h1>Dump Builder</h1>
+        <p>Scegli una root di lavoro, naviga il tree e seleziona con tri-state cosa dumpare.</p>
+      </div>
+      <section class="metric-card">
+        <strong id="countLabel">0 file / 0 cartelle</strong>
+        <span>Contenuto incluso</span>
+      </section>
+    </header>
+
+    <main class="main-grid">
+      <section class="card panel-left">
+        <div class="panel-head">
+          <h2>File Tree</h2>
+          <p>Lavora da una singola root: il focus serve per navigare, le checkbox decidono cosa finisce nel dump.</p>
+        </div>
+        <div id="treeRoot" class="tree-root"></div>
+        <div class="actions">
+          <button id="chooseRootButton" class="secondary">Scegli root</button>
+          <button id="openPathButton" class="ghost">Apri risorsa</button>
+          <button id="clearSelectionButton" class="ghost">Azzera selezione</button>
+        </div>
+      </section>
+
+      <section class="card card-alt panel-right">
+        <div class="panel-head">
+          <h2>Selection Summary</h2>
+          <p>Il riepilogo deriva dalla selezione normalizzata: niente duplicati, override inclusi, preview coerente.</p>
+        </div>
+
+        <section class="stats-card">
+          <div>
+            <span>File</span>
+            <strong id="fileCountLabel">0</strong>
+          </div>
+          <div>
+            <span>Cartelle</span>
+            <strong id="directoryCountLabel">0</strong>
+          </div>
+          <div>
+            <span>Dimensione</span>
+            <strong id="sizeLabel">0 B</strong>
+          </div>
+        </section>
+
+        <label class="field-label" for="outputPathInput">File di output</label>
+        <div class="output-row">
+          <input id="outputPathInput" type="text" autocomplete="off">
+          <button id="browseOutputButton" class="secondary">Sfoglia</button>
+        </div>
+
+        <section class="format-section">
+          <span class="field-label">Formato</span>
+          <div class="radio-row">
+            <label><input type="radio" name="format" value="txt" checked> TXT</label>
+            <label><input type="radio" name="format" value="md"> MD</label>
+            <label><input type="radio" name="format" value="html"> HTML</label>
+          </div>
+        </section>
+
+        <section class="summary-card">
+          <h3>Riepilogo rapido</h3>
+          <p id="summaryLabel">Scegli una root di lavoro da navigare.</p>
+          <p id="warningLabel">Nessun warning</p>
+        </section>
+
+        <section class="preview-card">
+          <h3>Preview export</h3>
+          <ul id="previewList"></ul>
+        </section>
+
+        <div id="busyBar" class="busy-bar hidden"></div>
+        <button id="generateButton" class="primary">Genera dump</button>
+      </section>
+    </main>
+
+    <footer class="card footer">
+      <div>
+        <span id="statusBadge" class="status-badge neutral">Stato</span>
+        <p id="statusLabel">Pronto per creare un nuovo dump</p>
+      </div>
+      <small>Tree UI locale Electron con selezione normalizzata.</small>
+    </footer>
+  </div>
+
+  <script src="../src/selection-model.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

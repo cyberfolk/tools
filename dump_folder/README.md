@@ -1,43 +1,65 @@
 # dump_folder
 
-> Dump ricorsivo del contenuto di una directory in un singolo file testuale.
+> Dump ricorsivo del contenuto di file e cartelle in un singolo file (`txt`, `md`, `html`).
 
----
+## Struttura
 
-## Scopo:
+- `engine/`: logica core del dump e modello di selezione
+- `desktop/tkinter/`: GUI Tkinter
+- `desktop/electron/`: GUI Electron e asset desktop
+- `scripts/`: entrypoint CLI e script di supporto
+- `tests/`: test automatici
+- `docs/`: documentazione e specifiche
 
-- Avere una rappresentazione piatta e completa di una cartella
-- Includere il contenuto dei file testuali inline
+## Scopo
+
+- Selezionare una root locale e generare un dump unico e leggibile
+- Includere contenuto testuale inline
 - Mantenere un ordine stabile e riproducibile
-- evitare archivi binari (zip, tar) e compressioni
+- Gestire i file binari con placeholder
 
----
-
-## Uso da terminale:
+## Avvio GUI Tkinter
 
 ```bash
-dump_folder 
+python dump_folder/desktop/tkinter/main.py
+```
+
+La GUI attuale lavora su una singola root, permette la selezione tri-state nel tree e genera un output `txt`, `md` o `html`.
+
+Se la GUI Tkinter incontra errori o callback che falliscono, scrive un log in:
+
+```bash
+dump_folder/logs/tkinter.log
+```
+
+## Uso da terminale
+
+```bash
+dump_folder
 dump_folder .
-dump_folder /percorso/cartella
+dump_folder . txt
+dump_folder . md
+dump_folder . html
 ```
 
----
-
-## Installarlo sul Terminale:
+## Installazione nel terminale
 
 ```bash
-# Posizionato nella radice della repo:
-chmod +x dump_folder/dump_folder.py
+chmod +x dump_folder/scripts/dump_folder.py
 mkdir -p ~/bin
-ln -s ~/path/assoluto/per/tools/dump_folder/dump_folder.py ~/bin/dump_folder
+ln -s ~/path/assoluto/per/tools/dump_folder/scripts/dump_folder.py ~/bin/dump_folder
 ```
 
----
+## GUI Electron
 
-## Aggiornarlo sul Terminale:
-
-Affinché le modifiche al codice si riflettano anche sul funzionamento da terminale, occorre eseguire:
+Percorso:
 
 ```bash
-ln -s ~/path/assoluto/per/tools/dump_folder/dump_folder.py ~/bin/dump_folder
+dump_folder/desktop/electron
+```
+
+Rebuild e riavvio rapido da Git Bash:
+
+```bash
+dump_folder/scripts/rebuild_electron_app.sh
 ```

@@ -1,0 +1,36 @@
+{
+  "name": "dump-builder-electron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GUI Electron per dump_folder",
+  "main": "main.js",
+  "productName": "Dump Builder",
+  "scripts": {
+    "start": "electron .",
+    "dist": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.cyberfolk.dumpbuilder",
+    "productName": "Dump Builder",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "portable"
+      ]
+    }
+  }
+}
